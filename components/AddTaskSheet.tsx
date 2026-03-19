@@ -29,7 +29,7 @@ export function AddTaskSheet({ visible, onClose }: AddTaskSheetProps) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal visible={visible} transparent animationType="slide">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.flex}
@@ -38,7 +38,7 @@ export function AddTaskSheet({ visible, onClose }: AddTaskSheetProps) {
         <View style={styles.sheet}>
           <Text style={styles.prompt}>what's the task?</Text>
           <TextInput
-            style={styles.titleInput}
+            style={styles.input}
             placeholder="e.g. write the report"
             placeholderTextColor="#D1D5DB"
             value={titleDraft}
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#111",
   },
-  titleInput: {
+  input: {
     fontSize: 16,
     color: "#111",
     borderBottomWidth: 1.5,
