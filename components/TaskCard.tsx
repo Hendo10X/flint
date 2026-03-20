@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, TextInput, StyleSheet } from "react-native";
 import { GestureDetector, Gesture, TouchableOpacity } from "react-native-gesture-handler";
 import Animated, {
@@ -8,7 +8,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withSequence,
+  withTiming,
+  Easing,
   interpolate,
   Extrapolation,
   runOnJS,
@@ -31,20 +32,24 @@ export function TaskCard({ task, position }: TaskCardProps) {
 
   const [isEditingFirstAction, setIsEditingFirstAction] = useState(false);
   const [firstActionDraft, setFirstActionDraft] = useState(task.firstAction ?? "");
+  const [titleWidth, setTitleWidth] = useState(0);
 
   const hasBeenStarted = task.startedAt !== null;
   const hasBeenRated = task.difficulty !== null;
 
   const swipeX = useSharedValue(0);
-  const cardScale = useSharedValue(1);
-  const circleScale = useSharedValue(1);
+  const checkScale = useSharedValue(hasBeenStarted ? 1 : 0);
+  const strikeProgress = useSharedValue(hasBeenStarted ? 1 : 0);
 
-  const bounceCard = () => {
-    cardScale.value = withSequence(
-      withSpring(1.02, { damping: 8 }),
-      withSpring(1, { damping: 10 })
-    );
-  };
+  useEffect(() => {
+    if (hasBeenStarted) {
+      checkScale.value = withSpring(1, { damping: 14, stiffness: 260 });
+      strikeProgress.value = withTiming(1, {
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+      });
+    }
+  }, [hasBeenStarted]);
 
   const onSwipedRightToStart = () => {
     if (hasBeenStarted) return;
@@ -53,7 +58,6 @@ export function TaskCard({ task, position }: TaskCardProps) {
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    bounceCard();
     startTask(task.id);
   };
 
@@ -80,46 +84,33 @@ export function TaskCard({ task, position }: TaskCardProps) {
     });
 
   const cardAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: swipeX.value }, { scale: cardScale.value }],
+    transform: [{ translateX: swipeX.value }],
   }));
 
   const startRevealStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      swipeX.value,
-      [0, SWIPE_START_THRESHOLD],
-      [0, 1],
-      Extrapolation.CLAMP
-    ),
+    opacity: interpolate(swipeX.value, [0, SWIPE_START_THRESHOLD], [0, 1], Extrapolation.CLAMP),
   }));
 
   const deleteRevealStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      swipeX.value,
-      [SWIPE_DELETE_THRESHOLD, 0],
-      [1, 0],
-      Extrapolation.CLAMP
-    ),
+    opacity: interpolate(swipeX.value, [SWIPE_DELETE_THRESHOLD, 0], [1, 0], Extrapolation.CLAMP),
   }));
 
-  const circleAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: circleScale.value }],
+  const checkAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+    opacity: checkScale.value,
+  }));
+
+  const strikeAnimatedStyle = useAnimatedStyle(() => ({
+    width: strikeProgress.value * titleWidth,
   }));
 
   const pressStartCircle = () => {
     if (hasBeenStarted) return;
-
-    circleScale.value = withSequence(
-      withSpring(0.75, { damping: 8 }),
-      withSpring(1, { damping: 6 })
-    );
-
     if (!hasBeenRated) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       return;
     }
-
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    bounceCard();
     startTask(task.id);
   };
 
@@ -151,22 +142,24 @@ export function TaskCard({ task, position }: TaskCardProps) {
       </Animated.View>
 
       <GestureDetector gesture={panGesture}>
-        <Animated.View
-          style={[styles.card, hasBeenStarted && styles.cardDimmed, cardAnimatedStyle]}
-        >
+        <Animated.View style={[styles.card, hasBeenStarted && styles.cardDimmed, cardAnimatedStyle]}>
           <View style={styles.titleRow}>
             <TouchableOpacity onPress={pressStartCircle} hitSlop={8}>
-              <Animated.View style={[styles.startCircle, circleAnimatedStyle]}>
-                <View style={[styles.startCircleFill, hasBeenStarted && styles.startCircleFillActive]} />
+              <Animated.View style={[styles.startCircle, hasBeenStarted && styles.startCircleActive]}>
+                <Animated.Text style={[styles.checkmark, checkAnimatedStyle]}>✓</Animated.Text>
               </Animated.View>
             </TouchableOpacity>
 
-            <Text
-              style={[styles.taskTitle, hasBeenStarted && styles.taskTitleMuted]}
-              numberOfLines={2}
-            >
-              {task.title}
-            </Text>
+            <View style={styles.titleContainer}>
+              <Text
+                style={[styles.taskTitle, hasBeenStarted && styles.taskTitleMuted]}
+                numberOfLines={2}
+                onLayout={(e) => setTitleWidth(e.nativeEvent.layout.width)}
+              >
+                {task.title}
+              </Text>
+              <Animated.View style={[styles.strikeLine, strikeAnimatedStyle]} />
+            </View>
 
             <TouchableOpacity onPress={() => removeTask(task.id)} hitSlop={8}>
               <Text style={styles.removeIcon}>×</Text>
@@ -267,26 +260,30 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   startCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    borderWidth: 1.5,
     borderColor: "#F97316",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-  startCircleFill: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "transparent",
-  },
-  startCircleFillActive: {
+  startCircleActive: {
     backgroundColor: "#F97316",
+    borderColor: "#F97316",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 13,
+  },
+  titleContainer: {
+    flex: 1,
+    justifyContent: "center",
   },
   taskTitle: {
-    flex: 1,
     fontSize: 17,
     fontWeight: "600",
     color: "#111",
@@ -294,6 +291,13 @@ const styles = StyleSheet.create({
   },
   taskTitleMuted: {
     color: "#9CA3AF",
+  },
+  strikeLine: {
+    position: "absolute",
+    height: 1.5,
+    backgroundColor: "#9CA3AF",
+    top: 11,
+    left: 0,
   },
   removeIcon: {
     fontSize: 22,
@@ -305,27 +309,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingLeft: 40,
+    paddingLeft: 34,
   },
   difficultyLabel: {
     fontSize: 12,
     color: "#9CA3AF",
   },
   firstActionText: {
-    paddingLeft: 40,
+    paddingLeft: 34,
     fontSize: 13,
     color: "#F97316",
     fontWeight: "500",
   },
   firstActionPrompt: {
-    paddingLeft: 40,
+    paddingLeft: 34,
     fontSize: 13,
     color: "#D1D5DB",
   },
   firstActionInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 40,
+    paddingLeft: 34,
     gap: 8,
   },
   firstActionInput: {
@@ -342,7 +346,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   markDoneButton: {
-    marginLeft: 40,
+    marginLeft: 34,
     marginTop: 4,
     alignSelf: "flex-start",
     paddingHorizontal: 12,

@@ -6,6 +6,14 @@ import { TaskCard } from "@/components/TaskCard";
 import { AddTaskSheet } from "@/components/AddTaskSheet";
 
 const MAX_VISIBLE_TASKS = 3;
+const MOCK_NAME = "Alex";
+
+function getDateLabel() {
+  const now = new Date();
+  const day = now.getDate();
+  const weekday = now.toLocaleDateString("en-US", { weekday: "long" });
+  return `${day}, ${weekday}`;
+}
 
 export default function TasksScreen() {
   const { tasks, streak } = useTaskStore();
@@ -17,11 +25,19 @@ export default function TasksScreen() {
   const hasQueuedTasks = queuedTaskCount > 0;
   const hasNoTasks = visibleTasks.length === 0;
   const hasStreak = streak > 0;
+  const pendingCount = activeTasks.filter((t) => !t.startedAt).length;
 
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.appName}>flint</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.appName}>flint</Text>
+          <Text style={styles.greeting}>Hello, {MOCK_NAME}</Text>
+          <Text style={styles.dateLabel}>{getDateLabel()}</Text>
+          <Text style={styles.pendingLabel}>
+            {pendingCount === 0 ? "No pending tasks" : `${pendingCount} pending task${pendingCount > 1 ? "s" : ""}`}
+          </Text>
+        </View>
         {hasStreak && (
           <View style={styles.streakBadge}>
             <Text style={styles.streakLabel}>🔥 {streak}</Text>
@@ -71,23 +87,45 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  headerLeft: {
+    gap: 2,
   },
   appName: {
     fontSize: 26,
     fontWeight: "800",
     color: "#F97316",
     letterSpacing: -0.5,
+    marginBottom: 6,
+  },
+  greeting: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#111",
+    letterSpacing: -0.5,
+  },
+  dateLabel: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  pendingLabel: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    marginTop: 1,
   },
   streakBadge: {
     backgroundColor: "#FFF7ED",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 4,
+    marginTop: 4,
   },
   streakLabel: {
     fontSize: 15,

@@ -5,9 +5,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withRepeat,
-  withSequence,
-  withSpring,
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -42,7 +39,6 @@ export default function TimerScreen() {
   const trackWidthRef = useRef(300);
 
   const progressFillWidth = useSharedValue(0);
-  const timeDisplayScale = useSharedValue(1);
 
   useEffect(() => {
     const elapsed = duration - remaining;
@@ -52,22 +48,7 @@ export default function TimerScreen() {
     });
   }, [remaining, duration]);
 
-  useEffect(() => {
-    if (isRunning) {
-      timeDisplayScale.value = withRepeat(
-        withSequence(
-          withTiming(1.015, { duration: 3000, easing: Easing.inOut(Easing.sine) }),
-          withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sine) })
-        ),
-        -1,
-        false
-      );
-    } else {
-      timeDisplayScale.value = withSpring(1, { damping: 12 });
-    }
-  }, [isRunning]);
-
-  useEffect(() => {
+useEffect(() => {
     if (!isRunning) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
@@ -115,10 +96,6 @@ export default function TimerScreen() {
     width: progressFillWidth.value,
   }));
 
-  const timeDisplayStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: timeDisplayScale.value }],
-  }));
-
   return (
     <SafeAreaView style={styles.screen}>
       <Text style={styles.screenTitle}>timer</Text>
@@ -142,11 +119,9 @@ export default function TimerScreen() {
       </View>
 
       <View style={styles.timerCenter}>
-        <Animated.Text
-          style={[styles.timeText, isFinished && styles.timeTextFinished, timeDisplayStyle]}
-        >
+        <Text style={[styles.timeText, isFinished && styles.timeTextFinished]}>
           {formatTime(remaining)}
-        </Animated.Text>
+        </Text>
         <Text style={styles.modeLabel}>
           {statusLabel(isFinished, isRunning, remaining, duration)}
         </Text>
