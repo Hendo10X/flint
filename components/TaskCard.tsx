@@ -16,7 +16,16 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTaskStore, Task } from "@/store/tasks";
-import { DifficultyDots } from "@/components/DifficultyDots";
+import { F } from "@/constants/fonts";
+
+const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
+  work:     { bg: "#EFF6FF", text: "#2563EB" },
+  school:   { bg: "#F5F3FF", text: "#7C3AED" },
+  personal: { bg: "#F0FDF4", text: "#16A34A" },
+  health:   { bg: "#FEF2F2", text: "#DC2626" },
+  home:     { bg: "#FFFBEB", text: "#D97706" },
+  creative: { bg: "#F0FDFA", text: "#0D9488" },
+};
 
 const SWIPE_START_THRESHOLD = 90;
 const SWIPE_DELETE_THRESHOLD = -90;
@@ -27,15 +36,13 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, position }: TaskCardProps) {
-  const { setDifficulty, startTask, completeTask, removeTask, setFirstAction } =
-    useTaskStore();
+  const { startTask, completeTask, removeTask, setFirstAction } = useTaskStore();
 
   const [isEditingFirstAction, setIsEditingFirstAction] = useState(false);
   const [firstActionDraft, setFirstActionDraft] = useState(task.firstAction ?? "");
   const [titleWidth, setTitleWidth] = useState(0);
 
   const hasBeenStarted = task.startedAt !== null;
-  const hasBeenRated = task.difficulty !== null;
 
   const swipeX = useSharedValue(0);
   const checkScale = useSharedValue(hasBeenStarted ? 1 : 0);
@@ -45,7 +52,7 @@ export function TaskCard({ task, position }: TaskCardProps) {
     if (hasBeenStarted) {
       checkScale.value = withSpring(1, { damping: 14, stiffness: 260 });
       strikeProgress.value = withTiming(1, {
-        duration: 400,
+        duration: 500,
         easing: Easing.out(Easing.cubic),
       });
     }
@@ -53,10 +60,6 @@ export function TaskCard({ task, position }: TaskCardProps) {
 
   const onSwipedRightToStart = () => {
     if (hasBeenStarted) return;
-    if (!hasBeenRated) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      return;
-    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     startTask(task.id);
   };
@@ -106,10 +109,6 @@ export function TaskCard({ task, position }: TaskCardProps) {
 
   const pressStartCircle = () => {
     if (hasBeenStarted) return;
-    if (!hasBeenRated) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      return;
-    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     startTask(task.id);
   };
@@ -132,9 +131,7 @@ export function TaskCard({ task, position }: TaskCardProps) {
       style={styles.wrapper}
     >
       <Animated.View style={[styles.actionBackground, styles.startBackground, startRevealStyle]}>
-        <Text style={styles.actionLabel}>
-          {hasBeenRated ? "→ start" : "rate first →"}
-        </Text>
+        <Text style={styles.actionLabel}>→ start</Text>
       </Animated.View>
 
       <Animated.View style={[styles.actionBackground, styles.deleteBackground, deleteRevealStyle]}>
@@ -145,20 +142,24 @@ export function TaskCard({ task, position }: TaskCardProps) {
         <Animated.View style={[styles.card, hasBeenStarted && styles.cardDimmed, cardAnimatedStyle]}>
           <View style={styles.titleRow}>
             <TouchableOpacity onPress={pressStartCircle} hitSlop={8}>
-              <Animated.View style={[styles.startCircle, hasBeenStarted && styles.startCircleActive]}>
+              <View style={[styles.squircle, hasBeenStarted && styles.squircleFilled]}>
                 <Animated.Text style={[styles.checkmark, checkAnimatedStyle]}>✓</Animated.Text>
-              </Animated.View>
+              </View>
             </TouchableOpacity>
 
             <View style={styles.titleContainer}>
-              <Text
-                style={[styles.taskTitle, hasBeenStarted && styles.taskTitleMuted]}
-                numberOfLines={2}
+              <View
+                style={styles.titleInner}
                 onLayout={(e) => setTitleWidth(e.nativeEvent.layout.width)}
               >
-                {task.title}
-              </Text>
-              <Animated.View style={[styles.strikeLine, strikeAnimatedStyle]} />
+                <Text
+                  style={[styles.taskTitle, hasBeenStarted && styles.taskTitleMuted]}
+                  numberOfLines={2}
+                >
+                  {task.title}
+                </Text>
+                <Animated.View style={[styles.strikeLine, strikeAnimatedStyle]} />
+              </View>
             </View>
 
             <TouchableOpacity onPress={() => removeTask(task.id)} hitSlop={8}>
@@ -166,15 +167,14 @@ export function TaskCard({ task, position }: TaskCardProps) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.difficultyRow}>
-            <Text style={styles.difficultyLabel}>
-              {hasBeenRated ? "to start" : "how hard to start?"}
-            </Text>
-            <DifficultyDots
-              selectedLevel={task.difficulty}
-              onSelectLevel={(level) => setDifficulty(task.id, level)}
-            />
-          </View>
+          {task.taskType && (() => {
+            const color = TYPE_COLORS[task.taskType] ?? { bg: "#F3F4F6", text: "#6B7280" };
+            return (
+              <View style={[styles.typeBadge, { backgroundColor: color.bg }]}>
+                <Text style={[styles.typeBadgeLabel, { color: color.text }]}>{task.taskType}</Text>
+              </View>
+            );
+          })()}
 
           {isEditingFirstAction ? (
             <View style={styles.firstActionInputRow}>
@@ -194,11 +194,11 @@ export function TaskCard({ task, position }: TaskCardProps) {
             </View>
           ) : task.firstAction ? (
             <TouchableOpacity onPress={() => setIsEditingFirstAction(true)}>
-              <Text style={styles.firstActionText}>⚡ {task.firstAction}</Text>
+              <Text style={styles.firstActionText}>{task.firstAction}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={() => setIsEditingFirstAction(true)}>
-              <Text style={styles.firstActionPrompt}>⚡ set first spark</Text>
+              <Text style={styles.firstActionPrompt}>set first spark</Text>
             </TouchableOpacity>
           )}
 
@@ -236,18 +236,19 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   actionLabel: {
+    fontFamily: F.semibold,
     color: "#fff",
-    fontWeight: "600",
     fontSize: 14,
   },
   actionLabelRight: {
     textAlign: "right",
   },
   card: {
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#fff",
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
+    borderWidth: 1.5,
+    borderColor: "#D1D5DB",
+    borderStyle: "dotted",
     padding: 16,
     gap: 10,
   },
@@ -259,33 +260,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  startCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 7,
-    borderWidth: 1.5,
-    borderColor: "#F97316",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  startCircleActive: {
-    backgroundColor: "#F97316",
-    borderColor: "#F97316",
-  },
-  checkmark: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-    lineHeight: 13,
-  },
   titleContainer: {
     flex: 1,
     justifyContent: "center",
   },
+  titleInner: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+  },
   taskTitle: {
     fontSize: 17,
-    fontWeight: "600",
+    fontFamily: F.semibold,
     color: "#111",
     lineHeight: 22,
   },
@@ -299,51 +284,42 @@ const styles = StyleSheet.create({
     top: 11,
     left: 0,
   },
+  squircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: "#F97316",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  squircleFilled: {
+    backgroundColor: "#F97316",
+    borderColor: "#F97316",
+  },
+  checkmark: {
+    fontFamily: F.bold,
+    color: "#fff",
+    fontSize: 12,
+    lineHeight: 13,
+  },
   removeIcon: {
     fontSize: 22,
+    fontFamily: F.regular,
     color: "#D1D5DB",
-    fontWeight: "300",
     lineHeight: 24,
   },
-  difficultyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingLeft: 34,
+  typeBadge: {
+    alignSelf: "flex-start",
+    marginLeft: 34,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
   },
-  difficultyLabel: {
-    fontSize: 12,
-    color: "#9CA3AF",
-  },
-  firstActionText: {
-    paddingLeft: 34,
-    fontSize: 13,
-    color: "#F97316",
-    fontWeight: "500",
-  },
-  firstActionPrompt: {
-    paddingLeft: 34,
-    fontSize: 13,
-    color: "#D1D5DB",
-  },
-  firstActionInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingLeft: 34,
-    gap: 8,
-  },
-  firstActionInput: {
-    flex: 1,
-    fontSize: 13,
-    color: "#111",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F97316",
-    paddingVertical: 2,
-  },
-  firstActionSaveLabel: {
-    fontSize: 13,
-    color: "#F97316",
-    fontWeight: "600",
+  typeBadgeLabel: {
+    fontSize: 11,
+    fontFamily: F.medium,
   },
   markDoneButton: {
     marginLeft: 34,
@@ -357,6 +333,39 @@ const styles = StyleSheet.create({
   },
   markDoneLabel: {
     fontSize: 12,
+    fontFamily: F.regular,
     color: "#9CA3AF",
+  },
+  firstActionText: {
+    paddingLeft: 34,
+    fontSize: 13,
+    fontFamily: F.medium,
+    color: "#F97316",
+  },
+  firstActionPrompt: {
+    paddingLeft: 34,
+    fontSize: 13,
+    fontFamily: F.regular,
+    color: "#D1D5DB",
+  },
+  firstActionInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingLeft: 34,
+    gap: 8,
+  },
+  firstActionInput: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: F.regular,
+    color: "#111",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F97316",
+    paddingVertical: 2,
+  },
+  firstActionSaveLabel: {
+    fontSize: 13,
+    fontFamily: F.semibold,
+    color: "#F97316",
   },
 });

@@ -8,6 +8,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import { F } from "@/constants/fonts";
 
 const PRESETS = [
   { label: "25m", seconds: 25 * 60 },
@@ -48,7 +49,7 @@ export default function TimerScreen() {
     });
   }, [remaining, duration]);
 
-useEffect(() => {
+  useEffect(() => {
     if (!isRunning) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontSize: 26,
-    fontWeight: "800",
+    fontFamily: F.bold,
     color: "#F97316",
     letterSpacing: -0.5,
     marginTop: 12,
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   },
   presetLabel: {
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: F.semibold,
     color: "#9CA3AF",
   },
   presetLabelActive: {
@@ -196,17 +197,16 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 82,
-    fontWeight: "200",
+    fontFamily: F.bold,
     color: "#111",
     letterSpacing: -4,
-    fontVariant: ["tabular-nums"],
   },
   timeTextFinished: {
     color: "#F97316",
   },
   modeLabel: {
     fontSize: 13,
-    fontWeight: "500",
+    fontFamily: F.medium,
     color: "#9CA3AF",
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   resetLabel: {
     fontSize: 16,
-    fontWeight: "500",
+    fontFamily: F.medium,
     color: "#9CA3AF",
   },
   startButton: {
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   startLabel: {
     fontSize: 16,
-    fontWeight: "700",
+    fontFamily: F.bold,
     color: "#fff",
   },
 });

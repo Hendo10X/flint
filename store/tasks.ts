@@ -3,7 +3,8 @@ import { create } from "zustand";
 export interface Task {
   id: string;
   title: string;
-  difficulty: number | null; // 1–5, null = unrated
+  taskType: string | null;
+  difficulty: number | null; // 1=easy 2=medium 3=hard, null = unset
   firstAction: string | null;
   startedAt: string | null;
   completedAt: string | null;
@@ -13,9 +14,8 @@ interface TaskStore {
   tasks: Task[];
   streak: number;
   lastStartDate: string | null;
-  addTask: (title: string) => void;
+  addTask: (title: string, difficulty?: number | null, taskType?: string | null) => void;
   removeTask: (id: string) => void;
-  setDifficulty: (id: string, d: number) => void;
   setFirstAction: (id: string, action: string) => void;
   startTask: (id: string) => void;
   completeTask: (id: string) => void;
@@ -34,14 +34,15 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   streak: 0,
   lastStartDate: null,
 
-  addTask: (title) =>
+  addTask: (title, difficulty = null, taskType = null) =>
     set((s) => ({
       tasks: [
         ...s.tasks,
         {
           id: Date.now().toString(),
           title,
-          difficulty: null,
+          taskType,
+          difficulty,
           firstAction: null,
           startedAt: null,
           completedAt: null,
@@ -51,11 +52,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   removeTask: (id) =>
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })),
-
-  setDifficulty: (id, difficulty) =>
-    set((s) => ({
-      tasks: s.tasks.map((t) => (t.id === id ? { ...t, difficulty } : t)),
-    })),
 
   setFirstAction: (id, firstAction) =>
     set((s) => ({

@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { F } from "@/constants/fonts";
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -30,7 +31,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: "500",
+          fontFamily: F.medium,
         },
       }}
     >

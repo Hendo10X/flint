@@ -1,6 +1,7 @@
 import { ScrollView, View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTaskStore } from "@/store/tasks";
+import { F } from "@/constants/fonts";
 
 const MOCK_LONGEST_STREAK = 14;
 const MOCK_STARTED_THIS_WEEK = 11;
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontSize: 26,
-    fontWeight: "800",
+    fontFamily: F.bold,
     color: "#F97316",
     letterSpacing: -0.5,
     marginTop: 12,
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     fontSize: 12,
-    fontWeight: "600",
+    fontFamily: F.semibold,
     color: "#9CA3AF",
     letterSpacing: 1.5,
     textTransform: "uppercase",
@@ -142,14 +143,14 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 42,
-    fontWeight: "700",
+    fontFamily: F.bold,
     color: "#111",
     letterSpacing: -1,
   },
   statLabel: {
     fontSize: 13,
+    fontFamily: F.medium,
     color: "#9CA3AF",
-    fontWeight: "500",
   },
   barChartCard: {
     backgroundColor: "#FAFAFA",
@@ -171,8 +172,8 @@ const styles = StyleSheet.create({
   },
   barCount: {
     fontSize: 11,
+    fontFamily: F.medium,
     color: "#9CA3AF",
-    fontWeight: "500",
     height: 16,
   },
   barTrack: {
@@ -191,8 +192,8 @@ const styles = StyleSheet.create({
   },
   barDay: {
     fontSize: 12,
+    fontFamily: F.medium,
     color: "#9CA3AF",
-    fontWeight: "500",
   },
   avgDifficultyCard: {
     backgroundColor: "#FAFAFA",
@@ -219,6 +220,7 @@ const styles = StyleSheet.create({
   },
   avgDifficultyNote: {
     fontSize: 13,
+    fontFamily: F.regular,
     color: "#9CA3AF",
     lineHeight: 18,
   },
@@ -230,8 +232,8 @@ const styles = StyleSheet.create({
   },
   insightText: {
     fontSize: 15,
+    fontFamily: F.medium,
     color: "#C2410C",
     lineHeight: 22,
-    fontWeight: "500",
   },
 });

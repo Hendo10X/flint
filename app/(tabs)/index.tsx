@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTaskStore, sortedActive } from "@/store/tasks";
 import { TaskCard } from "@/components/TaskCard";
 import { AddTaskSheet } from "@/components/AddTaskSheet";
+import { F } from "@/constants/fonts";
 
 const MAX_VISIBLE_TASKS = 3;
 const MOCK_NAME = "Alex";
@@ -35,7 +36,9 @@ export default function TasksScreen() {
           <Text style={styles.greeting}>Hello, {MOCK_NAME}</Text>
           <Text style={styles.dateLabel}>{getDateLabel()}</Text>
           <Text style={styles.pendingLabel}>
-            {pendingCount === 0 ? "No pending tasks" : `${pendingCount} pending task${pendingCount > 1 ? "s" : ""}`}
+            {pendingCount === 0
+              ? "No pending tasks"
+              : `${pendingCount} pending task${pendingCount > 1 ? "s" : ""}`}
           </Text>
         </View>
         {hasStreak && (
@@ -72,10 +75,7 @@ export default function TasksScreen() {
         <Text style={styles.addTaskButtonLabel}>+ add task</Text>
       </TouchableOpacity>
 
-      <AddTaskSheet
-        visible={addSheetOpen}
-        onClose={() => setAddSheetOpen(false)}
-      />
+      <AddTaskSheet visible={addSheetOpen} onClose={() => setAddSheetOpen(false)} />
     </SafeAreaView>
   );
 }
@@ -98,25 +98,26 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 26,
-    fontWeight: "800",
+    fontFamily: F.bold,
     color: "#F97316",
     letterSpacing: -0.5,
     marginBottom: 6,
   },
   greeting: {
     fontSize: 26,
-    fontWeight: "800",
+    fontFamily: F.bold,
     color: "#111",
     letterSpacing: -0.5,
   },
   dateLabel: {
     fontSize: 15,
-    fontWeight: "500",
+    fontFamily: F.medium,
     color: "#6B7280",
     marginTop: 2,
   },
   pendingLabel: {
     fontSize: 13,
+    fontFamily: F.regular,
     color: "#9CA3AF",
     marginTop: 1,
   },
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
   },
   streakLabel: {
     fontSize: 15,
-    fontWeight: "600",
+    fontFamily: F.semibold,
     color: "#F97316",
   },
   taskList: {
@@ -147,11 +148,12 @@ const styles = StyleSheet.create({
   },
   emptyStateHeading: {
     fontSize: 22,
-    fontWeight: "700",
+    fontFamily: F.bold,
     color: "#111",
   },
   emptyStateBody: {
     fontSize: 15,
+    fontFamily: F.regular,
     color: "#9CA3AF",
     textAlign: "center",
     lineHeight: 22,
@@ -159,6 +161,7 @@ const styles = StyleSheet.create({
   queuedCountHint: {
     textAlign: "center",
     fontSize: 13,
+    fontFamily: F.regular,
     color: "#D1D5DB",
     marginBottom: 8,
   },
@@ -173,7 +176,7 @@ const styles = StyleSheet.create({
   },
   addTaskButtonLabel: {
     fontSize: 15,
+    fontFamily: F.medium,
     color: "#9CA3AF",
-    fontWeight: "500",
   },
 });

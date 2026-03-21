@@ -1,2 +1,9 @@
 @import "tailwindcss";
 @import "uniwind";
+@import "heroui-native/styles";
+
+/* Override HeroUI accent to Flint orange */
+:root {
+  --accent: oklch(0.704 0.215 50.1);
+  --accent-foreground: oklch(100% 0 0);
+}
