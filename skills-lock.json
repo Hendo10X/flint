@@ -15,6 +15,11 @@
       "source": "heroui-inc/heroui",
       "sourceType": "github",
       "computedHash": "53d7d8ac1f13d64d0d6a0e7ee7ea7f3918fda5769db8e7958acbbb0f83df1a39"
+    },
+    "userinterface-wiki": {
+      "source": "raphaelsalaja/userinterface-wiki",
+      "sourceType": "github",
+      "computedHash": "1d1fbf49afa29712573e39bea7669b932160ae93bdf96a16d729849641b1fa22"
     }
   }
 }

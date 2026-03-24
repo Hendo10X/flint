@@ -7,7 +7,6 @@ import Animated, {
   LinearTransition,
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
   Easing,
   interpolate,
@@ -16,6 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTaskStore, Task } from "@/store/tasks";
+import { useFontScale } from "@/store/settings";
 import { F } from "@/constants/fonts";
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -33,10 +33,12 @@ const SWIPE_DELETE_THRESHOLD = -90;
 interface TaskCardProps {
   task: Task;
   position: number;
+  onActionComplete?: () => void;
 }
 
-export function TaskCard({ task, position }: TaskCardProps) {
+export function TaskCard({ task, position, onActionComplete }: TaskCardProps) {
   const { startTask, completeTask, removeTask, setFirstAction } = useTaskStore();
+  const scale = useFontScale();
 
   const [isEditingFirstAction, setIsEditingFirstAction] = useState(false);
   const [firstActionDraft, setFirstActionDraft] = useState(task.firstAction ?? "");
@@ -50,11 +52,8 @@ export function TaskCard({ task, position }: TaskCardProps) {
 
   useEffect(() => {
     if (hasBeenStarted) {
-      checkScale.value = withSpring(1, { damping: 14, stiffness: 260 });
-      strikeProgress.value = withTiming(1, {
-        duration: 500,
-        easing: Easing.out(Easing.cubic),
-      });
+      checkScale.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.cubic) });
+      strikeProgress.value = withTiming(1, { duration: 480, easing: Easing.out(Easing.cubic) });
     }
   }, [hasBeenStarted]);
 
@@ -62,11 +61,13 @@ export function TaskCard({ task, position }: TaskCardProps) {
     if (hasBeenStarted) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     startTask(task.id);
+    onActionComplete?.();
   };
 
   const onSwipedLeftToDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     removeTask(task.id);
+    onActionComplete?.();
   };
 
   const panGesture = Gesture.Pan()
@@ -76,13 +77,13 @@ export function TaskCard({ task, position }: TaskCardProps) {
     })
     .onEnd((e) => {
       if (e.translationX >= SWIPE_START_THRESHOLD) {
-        swipeX.value = withSpring(0, { damping: 15 });
+        swipeX.value = withTiming(0, { duration: 240, easing: Easing.out(Easing.quad) });
         runOnJS(onSwipedRightToStart)();
       } else if (e.translationX <= SWIPE_DELETE_THRESHOLD) {
-        swipeX.value = withSpring(0, { damping: 15 });
+        swipeX.value = withTiming(0, { duration: 240, easing: Easing.out(Easing.quad) });
         runOnJS(onSwipedLeftToDelete)();
       } else {
-        swipeX.value = withSpring(0, { damping: 15 });
+        swipeX.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.quad) });
       }
     });
 
@@ -111,11 +112,13 @@ export function TaskCard({ task, position }: TaskCardProps) {
     if (hasBeenStarted) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     startTask(task.id);
+    onActionComplete?.();
   };
 
   const pressMarkDone = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     completeTask(task.id);
+    onActionComplete?.();
   };
 
   const saveFirstAction = () => {
@@ -125,9 +128,9 @@ export function TaskCard({ task, position }: TaskCardProps) {
 
   return (
     <Animated.View
-      entering={FadeInDown.delay(position * 60).springify()}
-      exiting={FadeOutUp.duration(200)}
-      layout={LinearTransition.springify()}
+      entering={FadeInDown.delay(position * 60).duration(380)}
+      exiting={FadeOutUp.duration(180)}
+      layout={LinearTransition.duration(260)}
       style={styles.wrapper}
     >
       <Animated.View style={[styles.actionBackground, styles.startBackground, startRevealStyle]}>
@@ -153,7 +156,7 @@ export function TaskCard({ task, position }: TaskCardProps) {
                 onLayout={(e) => setTitleWidth(e.nativeEvent.layout.width)}
               >
                 <Text
-                  style={[styles.taskTitle, hasBeenStarted && styles.taskTitleMuted]}
+                  style={[styles.taskTitle, hasBeenStarted && styles.taskTitleMuted, { fontSize: scale * 17, lineHeight: scale * 22 }]}
                   numberOfLines={2}
                 >
                   {task.title}
@@ -179,7 +182,7 @@ export function TaskCard({ task, position }: TaskCardProps) {
           {isEditingFirstAction ? (
             <View style={styles.firstActionInputRow}>
               <TextInput
-                style={styles.firstActionInput}
+                style={[styles.firstActionInput, { fontSize: scale * 13 }]}
                 value={firstActionDraft}
                 onChangeText={setFirstActionDraft}
                 placeholder="smallest first action..."
@@ -189,16 +192,16 @@ export function TaskCard({ task, position }: TaskCardProps) {
                 returnKeyType="done"
               />
               <TouchableOpacity onPress={saveFirstAction}>
-                <Text style={styles.firstActionSaveLabel}>save</Text>
+                <Text style={[styles.firstActionSaveLabel, { fontSize: scale * 13 }]}>save</Text>
               </TouchableOpacity>
             </View>
           ) : task.firstAction ? (
             <TouchableOpacity onPress={() => setIsEditingFirstAction(true)}>
-              <Text style={styles.firstActionText}>{task.firstAction}</Text>
+              <Text style={[styles.firstActionText, { fontSize: scale * 13 }]}>{task.firstAction}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={() => setIsEditingFirstAction(true)}>
-              <Text style={styles.firstActionPrompt}>set first spark</Text>
+              <Text style={[styles.firstActionPrompt, { fontSize: scale * 13 }]}>set first spark</Text>
             </TouchableOpacity>
           )}
 
@@ -246,7 +249,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    borderWidth: 1.5,
+    borderWidth: 2.5,
     borderColor: "#D1D5DB",
     borderStyle: "dotted",
     padding: 16,

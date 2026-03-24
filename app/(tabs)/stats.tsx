@@ -1,15 +1,42 @@
-import { ScrollView, View, Text, StyleSheet } from "react-native";
+import { useEffect } from "react";
+import { ScrollView, View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useTaskStore } from "@/store/tasks";
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  Easing,
+} from "react-native-reanimated";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { authClient, getBaseURL } from "@/lib/auth-client";
 import { F } from "@/constants/fonts";
 
-const MOCK_LONGEST_STREAK = 14;
-const MOCK_STARTED_THIS_WEEK = 11;
-const MOCK_COMPLETED_THIS_WEEK = 8;
-const MOCK_AVG_DIFFICULTY = 2.4;
-const MOCK_DAILY_STARTS = [2, 3, 1, 0, 2, 1, 0];
-const WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"];
 const BAR_MAX_HEIGHT = 72;
+
+interface StatsData {
+  currentStreak: number;
+  longestStreak: number;
+  weekStarted: number;
+  weekCompleted: number;
+  dailyActivity: { date: string; day: string; started: number }[];
+  avgDifficulty: number;
+}
+
+const EMPTY_STATS: StatsData = {
+  currentStreak: 0,
+  longestStreak: 0,
+  weekStarted: 0,
+  weekCompleted: 0,
+  dailyActivity: ["M", "T", "W", "T", "F", "S", "S"].map((day) => ({
+    date: "",
+    day,
+    started: 0,
+  })),
+  avgDifficulty: 0,
+};
 
 function StatCard({ value, label }: { value: string | number; label: string }) {
   return (
@@ -24,46 +51,108 @@ function SectionHeader({ title }: { title: string }) {
   return <Text style={styles.sectionHeader}>{title}</Text>;
 }
 
+function AnimatedBar({
+  targetHeight,
+  isEmpty,
+  index,
+  triggered,
+}: {
+  targetHeight: number;
+  isEmpty: boolean;
+  index: number;
+  triggered: boolean;
+}) {
+  const height = useSharedValue(0);
+
+  useEffect(() => {
+    if (triggered) {
+      height.value = withDelay(
+        index * 55,
+        withTiming(Math.max(targetHeight, isEmpty ? 0 : 4), {
+          duration: 420,
+          easing: Easing.out(Easing.cubic),
+        })
+      );
+    } else {
+      height.value = 0;
+    }
+  }, [triggered, targetHeight]);
+
+  const animStyle = useAnimatedStyle(() => ({ height: height.value }));
+
+  return (
+    <Animated.View
+      style={[styles.barFill, isEmpty && styles.barFillEmpty, animStyle]}
+    />
+  );
+}
+
 export default function StatsScreen() {
-  const { streak } = useTaskStore();
-  const maxDailyStarts = Math.max(...MOCK_DAILY_STARTS, 1);
+  const queryClient = useQueryClient();
+
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+    }, [])
+  );
+
+  const { data, isLoading } = useQuery<StatsData>({
+    queryKey: ["stats"],
+    queryFn: async () => {
+      const cookies = authClient.getCookie?.();
+      const res = await fetch(`${getBaseURL()}/api/stats`, {
+        headers: cookies ? { Cookie: cookies } : {},
+        credentials: "omit",
+      });
+      if (!res.ok) throw new Error("Failed to fetch stats");
+      return res.json();
+    },
+    staleTime: 1000 * 60,
+  });
+
+  const stats = data ?? EMPTY_STATS;
+  const maxDailyStarts = Math.max(...stats.dailyActivity.map((d) => d.started), 1);
+  const hasData = !isLoading && !!data;
 
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.screenTitle}>stats</Text>
 
+        {isLoading && (
+          <ActivityIndicator color="#F97316" style={{ marginBottom: 16 }} />
+        )}
+
         <SectionHeader title="streak" />
         <View style={styles.cardRow}>
-          <StatCard value={streak} label="day streak" />
-          <StatCard value={MOCK_LONGEST_STREAK} label="longest ever" />
+          <StatCard value={stats.currentStreak} label="day streak" />
+          <StatCard value={stats.longestStreak} label="longest ever" />
         </View>
 
         <SectionHeader title="this week" />
         <View style={styles.cardRow}>
-          <StatCard value={MOCK_STARTED_THIS_WEEK} label="tasks started" />
-          <StatCard value={MOCK_COMPLETED_THIS_WEEK} label="completed" />
+          <StatCard value={stats.weekStarted} label="tasks started" />
+          <StatCard value={stats.weekCompleted} label="completed" />
         </View>
 
         <SectionHeader title="daily activity" />
         <View style={styles.barChartCard}>
           <View style={styles.barChart}>
-            {MOCK_DAILY_STARTS.map((count, index) => {
-              const barHeight = (count / maxDailyStarts) * BAR_MAX_HEIGHT;
-              const isEmpty = count === 0;
+            {stats.dailyActivity.map((item, index) => {
+              const barHeight = (item.started / maxDailyStarts) * BAR_MAX_HEIGHT;
+              const isEmpty = item.started === 0;
               return (
                 <View key={index} style={styles.barColumn}>
-                  <Text style={styles.barCount}>{count > 0 ? count : ""}</Text>
+                  <Text style={styles.barCount}>{item.started > 0 ? item.started : ""}</Text>
                   <View style={styles.barTrack}>
-                    <View
-                      style={[
-                        styles.barFill,
-                        { height: Math.max(barHeight, isEmpty ? 0 : 4) },
-                        isEmpty && styles.barFillEmpty,
-                      ]}
+                    <AnimatedBar
+                      targetHeight={barHeight}
+                      isEmpty={isEmpty}
+                      index={index}
+                      triggered={hasData}
                     />
                   </View>
-                  <Text style={styles.barDay}>{WEEK_DAYS[index]}</Text>
+                  <Text style={styles.barDay}>{item.day}</Text>
                 </View>
               );
             })}
@@ -78,7 +167,7 @@ export default function StatsScreen() {
                 key={level}
                 style={[
                   styles.difficultyDot,
-                  level <= Math.round(MOCK_AVG_DIFFICULTY)
+                  level <= Math.round(stats.avgDifficulty)
                     ? styles.difficultyDotFilled
                     : styles.difficultyDotEmpty,
                 ]}
@@ -86,13 +175,13 @@ export default function StatsScreen() {
             ))}
           </View>
           <Text style={styles.avgDifficultyNote}>
-            {MOCK_AVG_DIFFICULTY.toFixed(1)} out of 5 — you pick manageable tasks
+            {stats.avgDifficulty.toFixed(1)} out of 3 — you pick manageable tasks
           </Text>
         </View>
 
         <View style={styles.insightCard}>
           <Text style={styles.insightText}>
-            you started {MOCK_STARTED_THIS_WEEK} tasks this week.{"\n"}
+            you started {stats.weekStarted} tasks this week.{"\n"}
             for ADHD brains, starting is the real win. 🔥
           </Text>
         </View>
@@ -188,7 +277,6 @@ const styles = StyleSheet.create({
   },
   barFillEmpty: {
     backgroundColor: "#F0F0F0",
-    height: 3,
   },
   barDay: {
     fontSize: 12,

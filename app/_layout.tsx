@@ -4,17 +4,31 @@ import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Slot } from "expo-router";
 import { HeroUINativeProvider } from "heroui-native";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useSettingsStore } from "@/store/settings";
 import "../global.css";
 
 SplashScreen.preventAutoHideAsync();
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 1000 * 60 * 5, retry: 1 },
+  },
+});
+
 export default function RootLayout() {
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+
   const [fontsLoaded, fontError] = useFonts({
     "OpenRunde-Regular": require("../assets/images/fonts/OpenRunde-Regular-BF64ee9c627e5b6.otf"),
     "OpenRunde-Medium": require("../assets/images/fonts/OpenRunde-Medium-BF64ee9c62ad3ad.otf"),
     "OpenRunde-Semibold": require("../assets/images/fonts/OpenRunde-Semibold-BF64ee9c629e0a5.otf"),
     "OpenRunde-Bold": require("../assets/images/fonts/OpenRunde-Bold-BF64ee9c62a2035.otf"),
   });
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -27,7 +41,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <HeroUINativeProvider>
-        <Slot />
+        <QueryClientProvider client={queryClient}>
+          <Slot />
+        </QueryClientProvider>
       </HeroUINativeProvider>
     </GestureHandlerRootView>
   );
