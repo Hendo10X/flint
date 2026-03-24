@@ -115,7 +115,7 @@ export default function SignUpScreen() {
       }
       transitionTo(4);
     } else if (step === 4) {
-      router.replace("/(tabs)/" as any);
+      router.replace("/(auth)/onboarding" as any);
     }
   };
 
