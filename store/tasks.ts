@@ -5,6 +5,7 @@ import {
   apiPatchTask,
   apiDeleteTask,
 } from "@/lib/task-api";
+import { toast } from "@/store/toast";
 
 export interface Task {
   id: string;
@@ -24,7 +25,7 @@ interface TaskStore {
   openAddSheet: () => void;
   closeAddSheet: () => void;
   loadTasks: () => Promise<void>;
-  addTask: (title: string, difficulty?: number | null, taskType?: string | null) => Promise<void>;
+  addTask: (title: string, difficulty?: number | null, taskType?: string | null, firstAction?: string | null) => Promise<void>;
   removeTask: (id: string) => void;
   setFirstAction: (id: string, action: string) => void;
   startTask: (id: string) => void;
@@ -70,39 +71,38 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     try {
       const { tasks: rows, streak } = await apiFetchTasks();
       set({ tasks: rows.map(dbRowToTask), streak });
-    } catch (e) {
-      console.error("loadTasks:", e);
+    } catch {
+      toast("Couldn't load tasks. Check your connection.");
     }
   },
 
-  addTask: async (title, difficulty = null, taskType = null) => {
-    // Generate the ID client-side so it never changes — prevents double-animation
+  addTask: async (title, difficulty = null, taskType = null, firstAction = null) => {
     const id = uuid();
     set((s) => ({
       tasks: [
         ...s.tasks,
-        { id, title, taskType, difficulty, firstAction: null, startedAt: null, completedAt: null },
+        { id, title, taskType, difficulty, firstAction, startedAt: null, completedAt: null },
       ],
     }));
 
     try {
-      await apiCreateTask({ id, title, taskType, difficulty });
-    } catch (e) {
-      console.error("addTask:", e);
+      await apiCreateTask({ id, title, taskType, difficulty, firstAction });
+    } catch {
       set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+      toast("Couldn't save task. Try again.");
     }
   },
 
   removeTask: (id) => {
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
-    apiDeleteTask(id).catch((e) => console.error("removeTask:", e));
+    apiDeleteTask(id).catch(() => toast("Couldn't delete task. Try again."));
   },
 
   setFirstAction: (id, firstAction) => {
     set((s) => ({
       tasks: s.tasks.map((t) => (t.id === id ? { ...t, firstAction } : t)),
     }));
-    apiPatchTask(id, { firstAction }).catch((e) => console.error("setFirstAction:", e));
+    apiPatchTask(id, { firstAction }).catch(() => toast("Couldn't update task."));
   },
 
   startTask: (id) => {
@@ -125,7 +125,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       lastStartDate: today,
     }));
 
-    apiPatchTask(id, { startedAt: true }).catch((e) => console.error("startTask:", e));
+    apiPatchTask(id, { startedAt: true }).catch(() => toast("Couldn't start task. Try again."));
   },
 
   completeTask: (id) => {
@@ -133,7 +133,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     set((s) => ({
       tasks: s.tasks.map((t) => (t.id === id ? { ...t, completedAt } : t)),
     }));
-    apiPatchTask(id, { completedAt: true }).catch((e) => console.error("completeTask:", e));
+    apiPatchTask(id, { completedAt: true }).catch(() => toast("Couldn't complete task. Try again."));
   },
 }));
 

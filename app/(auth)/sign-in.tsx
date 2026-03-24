@@ -165,6 +165,15 @@ export default function SignInScreen() {
             />
 
             <TouchableOpacity
+              style={styles.forgotLink}
+              onPress={() => router.push("/(auth)/forgot-password" as any)}
+              disabled={loading}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.forgotLinkLabel}>forgot password?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[styles.primaryButton, loading && styles.buttonDisabled]}
               onPress={handleSignIn}
               activeOpacity={0.85}
@@ -347,5 +356,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: F.semibold,
     color: "#F97316",
+  },
+  forgotLink: {
+    alignSelf: "flex-end",
+    marginTop: -4,
+  },
+  forgotLinkLabel: {
+    fontSize: 14,
+    fontFamily: F.medium,
+    color: "#9CA3AF",
   },
 });

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
+import type { ThemeMode, LightAccent, DarkAccent } from "@/constants/themes";
 
 export type FontSizeKey = "small" | "medium" | "large";
 
@@ -15,36 +16,76 @@ export const FONT_SIZE_LABELS: Record<FontSizeKey, string> = {
   large: "Large",
 };
 
-const STORAGE_KEY = "flint_settings_v1";
+const STORAGE_KEY = "flint_settings_v2";
 
 interface SettingsStore {
   fontSizeKey: FontSizeKey;
+  themeMode: ThemeMode;
+  lightAccent: LightAccent;
+  darkAccent: DarkAccent;
   setFontSize: (key: FontSizeKey) => void;
+  setThemeMode: (mode: ThemeMode) => void;
+  setLightAccent: (accent: LightAccent) => void;
+  setDarkAccent: (accent: DarkAccent) => void;
   loadSettings: () => Promise<void>;
 }
 
-export const useSettingsStore = create<SettingsStore>((set) => ({
+function persist(state: Partial<SettingsStore>) {
+  const { fontSizeKey, themeMode, lightAccent, darkAccent } = state as any;
+  SecureStore.setItemAsync(
+    STORAGE_KEY,
+    JSON.stringify({ fontSizeKey, themeMode, lightAccent, darkAccent })
+  ).catch(() => {});
+}
+
+export const useSettingsStore = create<SettingsStore>((set, get) => ({
   fontSizeKey: "medium",
+  themeMode: "system",
+  lightAccent: "orange",
+  darkAccent: "orange",
 
   setFontSize: (fontSizeKey) => {
     set({ fontSizeKey });
-    SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify({ fontSizeKey })).catch(() => {});
+    persist({ ...get(), fontSizeKey });
+  },
+
+  setThemeMode: (themeMode) => {
+    set({ themeMode });
+    persist({ ...get(), themeMode });
+  },
+
+  setLightAccent: (lightAccent) => {
+    set({ lightAccent });
+    persist({ ...get(), lightAccent });
+  },
+
+  setDarkAccent: (darkAccent) => {
+    set({ darkAccent });
+    persist({ ...get(), darkAccent });
   },
 
   loadSettings: async () => {
     try {
       const raw = await SecureStore.getItemAsync(STORAGE_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.fontSizeKey && parsed.fontSizeKey in FONT_SCALE) {
-          set({ fontSizeKey: parsed.fontSizeKey });
-        }
+        const p = JSON.parse(raw);
+        set({
+          ...(p.fontSizeKey && p.fontSizeKey in FONT_SCALE ? { fontSizeKey: p.fontSizeKey } : {}),
+          ...(p.themeMode && ["light", "dark", "system"].includes(p.themeMode)
+            ? { themeMode: p.themeMode }
+            : {}),
+          ...(p.lightAccent && ["orange", "lavender", "teal"].includes(p.lightAccent)
+            ? { lightAccent: p.lightAccent }
+            : {}),
+          ...(p.darkAccent && ["orange", "lemon", "coral"].includes(p.darkAccent)
+            ? { darkAccent: p.darkAccent }
+            : {}),
+        });
       }
     } catch {}
   },
 }));
 
-/** Returns the current scale multiplier (0.85 / 1.0 / 1.2). */
 export function useFontScale() {
   const key = useSettingsStore((s) => s.fontSizeKey);
   return FONT_SCALE[key];

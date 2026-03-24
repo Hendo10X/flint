@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { ScrollView, View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import Animated, {
@@ -13,6 +14,8 @@ import Animated, {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authClient, getBaseURL } from "@/lib/auth-client";
 import { F } from "@/constants/fonts";
+import { useTheme } from "@/hooks/useTheme";
+import { Theme } from "@/constants/themes";
 
 const BAR_MAX_HEIGHT = 72;
 
@@ -38,7 +41,108 @@ const EMPTY_STATS: StatsData = {
   avgDifficulty: 0,
 };
 
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.bg },
+    scrollContent: { paddingHorizontal: 20, paddingBottom: 32 },
+    screenTitle: {
+      fontSize: 26,
+      fontFamily: F.bold,
+      color: t.accent,
+      letterSpacing: -0.5,
+      marginTop: 12,
+      marginBottom: 24,
+    },
+    sectionHeader: {
+      fontSize: 12,
+      fontFamily: F.semibold,
+      color: t.textMuted,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      marginBottom: 10,
+      marginTop: 24,
+    },
+    cardRow: { flexDirection: "row", gap: 10 },
+    statCard: {
+      flex: 1,
+      backgroundColor: t.surfaceAlt,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      padding: 20,
+      alignItems: "center",
+      gap: 4,
+    },
+    statValue: {
+      fontSize: 42,
+      fontFamily: F.bold,
+      color: t.text,
+      letterSpacing: -1,
+    },
+    statLabel: {
+      fontSize: 13,
+      fontFamily: F.medium,
+      color: t.textMuted,
+    },
+    barChartCard: {
+      backgroundColor: t.surfaceAlt,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      padding: 20,
+    },
+    barChart: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      justifyContent: "space-between",
+      height: BAR_MAX_HEIGHT + 40,
+    },
+    barColumn: { flex: 1, alignItems: "center", gap: 6 },
+    barCount: {
+      fontSize: 11,
+      fontFamily: F.medium,
+      color: t.textMuted,
+      height: 16,
+    },
+    barTrack: { flex: 1, width: "60%", justifyContent: "flex-end" },
+    barFill: { width: "100%", backgroundColor: t.accent, borderRadius: 4 },
+    barFillEmpty: { backgroundColor: t.border },
+    barDay: { fontSize: 12, fontFamily: F.medium, color: t.textMuted },
+    avgDifficultyCard: {
+      backgroundColor: t.surfaceAlt,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: t.border,
+      padding: 20,
+      gap: 12,
+    },
+    difficultyDotsRow: { flexDirection: "row", gap: 8 },
+    difficultyDot: { width: 16, height: 16, borderRadius: 8 },
+    difficultyDotFilled: { backgroundColor: t.accent },
+    difficultyDotEmpty: { backgroundColor: t.borderInput },
+    avgDifficultyNote: {
+      fontSize: 13,
+      fontFamily: F.regular,
+      color: t.textMuted,
+      lineHeight: 18,
+    },
+    insightCard: {
+      marginTop: 24,
+      backgroundColor: t.accentBg,
+      borderRadius: 16,
+      padding: 20,
+    },
+    insightText: {
+      fontSize: 15,
+      fontFamily: F.medium,
+      color: t.accent,
+      lineHeight: 22,
+    },
+  });
+
 function StatCard({ value, label }: { value: string | number; label: string }) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   return (
     <View style={styles.statCard}>
       <Text style={styles.statValue}>{value}</Text>
@@ -48,6 +152,8 @@ function StatCard({ value, label }: { value: string | number; label: string }) {
 }
 
 function SectionHeader({ title }: { title: string }) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   return <Text style={styles.sectionHeader}>{title}</Text>;
 }
 
@@ -62,6 +168,8 @@ function AnimatedBar({
   index: number;
   triggered: boolean;
 }) {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const height = useSharedValue(0);
 
   useEffect(() => {
@@ -88,6 +196,8 @@ function AnimatedBar({
 }
 
 export default function StatsScreen() {
+  const theme = useTheme();
+  const styles = createStyles(theme);
   const queryClient = useQueryClient();
 
   useFocusEffect(
@@ -116,11 +226,12 @@ export default function StatsScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <StatusBar style={theme.statusBar === "light-content" ? "light" : "dark"} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.screenTitle}>stats</Text>
 
         {isLoading && (
-          <ActivityIndicator color="#F97316" style={{ marginBottom: 16 }} />
+          <ActivityIndicator color={theme.accent} style={{ marginBottom: 16 }} />
         )}
 
         <SectionHeader title="streak" />
@@ -189,139 +300,3 @@ export default function StatsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
-  screenTitle: {
-    fontSize: 26,
-    fontFamily: F.bold,
-    color: "#F97316",
-    letterSpacing: -0.5,
-    marginTop: 12,
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    fontSize: 12,
-    fontFamily: F.semibold,
-    color: "#9CA3AF",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-    marginBottom: 10,
-    marginTop: 24,
-  },
-  cardRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#FAFAFA",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    padding: 20,
-    alignItems: "center",
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 42,
-    fontFamily: F.bold,
-    color: "#111",
-    letterSpacing: -1,
-  },
-  statLabel: {
-    fontSize: 13,
-    fontFamily: F.medium,
-    color: "#9CA3AF",
-  },
-  barChartCard: {
-    backgroundColor: "#FAFAFA",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    padding: 20,
-  },
-  barChart: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    height: BAR_MAX_HEIGHT + 40,
-  },
-  barColumn: {
-    flex: 1,
-    alignItems: "center",
-    gap: 6,
-  },
-  barCount: {
-    fontSize: 11,
-    fontFamily: F.medium,
-    color: "#9CA3AF",
-    height: 16,
-  },
-  barTrack: {
-    flex: 1,
-    width: "60%",
-    justifyContent: "flex-end",
-  },
-  barFill: {
-    width: "100%",
-    backgroundColor: "#F97316",
-    borderRadius: 4,
-  },
-  barFillEmpty: {
-    backgroundColor: "#F0F0F0",
-  },
-  barDay: {
-    fontSize: 12,
-    fontFamily: F.medium,
-    color: "#9CA3AF",
-  },
-  avgDifficultyCard: {
-    backgroundColor: "#FAFAFA",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-    padding: 20,
-    gap: 12,
-  },
-  difficultyDotsRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  difficultyDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  difficultyDotFilled: {
-    backgroundColor: "#F97316",
-  },
-  difficultyDotEmpty: {
-    backgroundColor: "#E5E7EB",
-  },
-  avgDifficultyNote: {
-    fontSize: 13,
-    fontFamily: F.regular,
-    color: "#9CA3AF",
-    lineHeight: 18,
-  },
-  insightCard: {
-    marginTop: 24,
-    backgroundColor: "#FFF7ED",
-    borderRadius: 16,
-    padding: 20,
-  },
-  insightText: {
-    fontSize: 15,
-    fontFamily: F.medium,
-    color: "#C2410C",
-    lineHeight: 22,
-  },
-});

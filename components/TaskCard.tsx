@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { GestureDetector, Gesture, TouchableOpacity } from "react-native-gesture-handler";
 import Animated, {
   FadeInDown,
@@ -17,6 +17,8 @@ import * as Haptics from "expo-haptics";
 import { useTaskStore, Task } from "@/store/tasks";
 import { useFontScale } from "@/store/settings";
 import { F } from "@/constants/fonts";
+import { useTheme } from "@/hooks/useTheme";
+import { Theme } from "@/constants/themes";
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   work:     { bg: "#EFF6FF", text: "#2563EB" },
@@ -36,12 +38,39 @@ interface TaskCardProps {
   onActionComplete?: () => void;
 }
 
-export function TaskCard({ task, position, onActionComplete }: TaskCardProps) {
-  const { startTask, completeTask, removeTask, setFirstAction } = useTaskStore();
-  const scale = useFontScale();
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
+    wrapper: { position: "relative" },
+    actionBackground: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16, paddingHorizontal: 20, justifyContent: "center" },
+    startBackground: { backgroundColor: t.accent, alignItems: "flex-start" },
+    deleteBackground: { backgroundColor: "#F87171", alignItems: "flex-end" },
+    actionLabel: { fontFamily: F.semibold, color: "#fff", fontSize: 14 },
+    actionLabelRight: { textAlign: "right" },
+    card: { backgroundColor: t.surface, borderRadius: 16, borderWidth: 2.5, borderColor: t.borderInput, borderStyle: "dotted", padding: 16, gap: 10 },
+    cardDimmed: { opacity: 0.75 },
+    titleRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+    titleContainer: { flex: 1, justifyContent: "center" },
+    titleInner: { alignSelf: "flex-start", maxWidth: "100%" },
+    taskTitle: { fontSize: 17, fontFamily: F.semibold, color: t.text, lineHeight: 22 },
+    taskTitleMuted: { color: t.textMuted },
+    strikeLine: { position: "absolute", height: 1.5, backgroundColor: t.textMuted, top: 11, left: 0 },
+    squircle: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: t.accent, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+    squircleFilled: { backgroundColor: t.accent, borderColor: t.accent },
+    checkmark: { fontFamily: F.bold, color: "#fff", fontSize: 12, lineHeight: 13 },
+    removeIcon: { fontSize: 22, fontFamily: F.regular, color: t.textFaint, lineHeight: 24 },
+    typeBadge: { alignSelf: "flex-start", marginLeft: 34, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
+    typeBadgeLabel: { fontSize: 11, fontFamily: F.medium },
+    markDoneButton: { marginLeft: 34, marginTop: 4, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: t.border },
+    markDoneLabel: { fontSize: 12, fontFamily: F.regular, color: t.textMuted },
+    firstActionText: { paddingLeft: 34, fontSize: 13, fontFamily: F.regular, color: t.textMuted },
+  });
 
-  const [isEditingFirstAction, setIsEditingFirstAction] = useState(false);
-  const [firstActionDraft, setFirstActionDraft] = useState(task.firstAction ?? "");
+export function TaskCard({ task, position, onActionComplete }: TaskCardProps) {
+  const { startTask, completeTask, removeTask } = useTaskStore();
+  const scale = useFontScale();
+  const theme = useTheme();
+  const styles = createStyles(theme);
+
   const [titleWidth, setTitleWidth] = useState(0);
 
   const hasBeenStarted = task.startedAt !== null;
@@ -72,9 +101,7 @@ export function TaskCard({ task, position, onActionComplete }: TaskCardProps) {
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-5, 5])
-    .onUpdate((e) => {
-      swipeX.value = e.translationX;
-    })
+    .onUpdate((e) => { swipeX.value = e.translationX; })
     .onEnd((e) => {
       if (e.translationX >= SWIPE_START_THRESHOLD) {
         swipeX.value = withTiming(0, { duration: 240, easing: Easing.out(Easing.quad) });
@@ -119,11 +146,6 @@ export function TaskCard({ task, position, onActionComplete }: TaskCardProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     completeTask(task.id);
     onActionComplete?.();
-  };
-
-  const saveFirstAction = () => {
-    if (firstActionDraft.trim()) setFirstAction(task.id, firstActionDraft.trim());
-    setIsEditingFirstAction(false);
   };
 
   return (
@@ -172,38 +194,19 @@ export function TaskCard({ task, position, onActionComplete }: TaskCardProps) {
 
           {task.taskType && (() => {
             const color = TYPE_COLORS[task.taskType] ?? { bg: "#F3F4F6", text: "#6B7280" };
+            const badgeBg = theme.isDark ? color.text + "22" : color.bg;
             return (
-              <View style={[styles.typeBadge, { backgroundColor: color.bg }]}>
+              <View style={[styles.typeBadge, { backgroundColor: badgeBg }]}>
                 <Text style={[styles.typeBadgeLabel, { color: color.text }]}>{task.taskType}</Text>
               </View>
             );
           })()}
 
-          {isEditingFirstAction ? (
-            <View style={styles.firstActionInputRow}>
-              <TextInput
-                style={[styles.firstActionInput, { fontSize: scale * 13 }]}
-                value={firstActionDraft}
-                onChangeText={setFirstActionDraft}
-                placeholder="smallest first action..."
-                placeholderTextColor="#D1D5DB"
-                autoFocus
-                onSubmitEditing={saveFirstAction}
-                returnKeyType="done"
-              />
-              <TouchableOpacity onPress={saveFirstAction}>
-                <Text style={[styles.firstActionSaveLabel, { fontSize: scale * 13 }]}>save</Text>
-              </TouchableOpacity>
-            </View>
-          ) : task.firstAction ? (
-            <TouchableOpacity onPress={() => setIsEditingFirstAction(true)}>
-              <Text style={[styles.firstActionText, { fontSize: scale * 13 }]}>{task.firstAction}</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={() => setIsEditingFirstAction(true)}>
-              <Text style={[styles.firstActionPrompt, { fontSize: scale * 13 }]}>set first spark</Text>
-            </TouchableOpacity>
-          )}
+          {task.firstAction ? (
+            <Text style={[styles.firstActionText, { fontSize: scale * 13 }]}>
+              → {task.firstAction}
+            </Text>
+          ) : null}
 
           {hasBeenStarted && (
             <TouchableOpacity style={styles.markDoneButton} onPress={pressMarkDone}>
@@ -215,160 +218,3 @@ export function TaskCard({ task, position, onActionComplete }: TaskCardProps) {
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    position: "relative",
-  },
-  actionBackground: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    justifyContent: "center",
-  },
-  startBackground: {
-    backgroundColor: "#F97316",
-    alignItems: "flex-start",
-  },
-  deleteBackground: {
-    backgroundColor: "#F87171",
-    alignItems: "flex-end",
-  },
-  actionLabel: {
-    fontFamily: F.semibold,
-    color: "#fff",
-    fontSize: 14,
-  },
-  actionLabelRight: {
-    textAlign: "right",
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    borderWidth: 2.5,
-    borderColor: "#D1D5DB",
-    borderStyle: "dotted",
-    padding: 16,
-    gap: 10,
-  },
-  cardDimmed: {
-    opacity: 0.75,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  titleContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  titleInner: {
-    alignSelf: "flex-start",
-    maxWidth: "100%",
-  },
-  taskTitle: {
-    fontSize: 17,
-    fontFamily: F.semibold,
-    color: "#111",
-    lineHeight: 22,
-  },
-  taskTitleMuted: {
-    color: "#9CA3AF",
-  },
-  strikeLine: {
-    position: "absolute",
-    height: 1.5,
-    backgroundColor: "#9CA3AF",
-    top: 11,
-    left: 0,
-  },
-  squircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 7,
-    borderWidth: 1.5,
-    borderColor: "#F97316",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  squircleFilled: {
-    backgroundColor: "#F97316",
-    borderColor: "#F97316",
-  },
-  checkmark: {
-    fontFamily: F.bold,
-    color: "#fff",
-    fontSize: 12,
-    lineHeight: 13,
-  },
-  removeIcon: {
-    fontSize: 22,
-    fontFamily: F.regular,
-    color: "#D1D5DB",
-    lineHeight: 24,
-  },
-  typeBadge: {
-    alignSelf: "flex-start",
-    marginLeft: 34,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  typeBadgeLabel: {
-    fontSize: 11,
-    fontFamily: F.medium,
-  },
-  markDoneButton: {
-    marginLeft: 34,
-    marginTop: 4,
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#F0F0F0",
-  },
-  markDoneLabel: {
-    fontSize: 12,
-    fontFamily: F.regular,
-    color: "#9CA3AF",
-  },
-  firstActionText: {
-    paddingLeft: 34,
-    fontSize: 13,
-    fontFamily: F.medium,
-    color: "#F97316",
-  },
-  firstActionPrompt: {
-    paddingLeft: 34,
-    fontSize: 13,
-    fontFamily: F.regular,
-    color: "#D1D5DB",
-  },
-  firstActionInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingLeft: 34,
-    gap: 8,
-  },
-  firstActionInput: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: F.regular,
-    color: "#111",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F97316",
-    paddingVertical: 2,
-  },
-  firstActionSaveLabel: {
-    fontSize: 13,
-    fontFamily: F.semibold,
-    color: "#F97316",
-  },
-});
